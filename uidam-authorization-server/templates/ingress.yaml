@@ -10,7 +10,8 @@ metadata:
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.scheme }}
     alb.ingress.kubernetes.io/target-type: {{ .Values.ingress.targetType }}
-    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-path: "{{ .Values.metrics.basePath }}/health/liveness"
+    alb.ingress.kubernetes.io/healthcheck-port: "{{ .Values.metrics.prometheus.agent.port }}"
     alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=300
     {{- if .Values.ingress.tls.enabled }}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
@@ -45,5 +46,3 @@ spec:
       {{- end }}
   {{- end }}
 {{- end }}
-
-

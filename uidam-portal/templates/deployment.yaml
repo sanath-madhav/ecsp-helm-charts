@@ -1,26 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "uidam-portal.fullname" . }}
-  labels: {{- include "uidam-portal.labels" . | nindent 4 }}
+  name: {{ include "uidam-web-admin-portal.fullname" . }}
+  labels: {{- include "uidam-web-admin-portal.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
-    matchLabels: {{- include "uidam-portal.selectorLabels" . | nindent 6 }}
+    matchLabels: {{- include "uidam-web-admin-portal.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        vault.security.banzaicloud.io/vault-addr: "{{ .Values.vault.url }}"
+        vault.security.banzaicloud.io/vault-role: "{{ include "uidam-web-admin-portal.fullname" . }}-role"
+        vault.security.banzaicloud.io/mutate-configmap: "true"
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-      labels: {{- include "uidam-portal.selectorLabels" . | nindent 8 }}
+      labels: {{- include "uidam-web-admin-portal.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets: {{- toYaml . | nindent 6 }}
       {{- end }}
-      serviceAccountName: {{ include "uidam-portal.fullname" . }}
+      serviceAccountName: {{ include "uidam-web-admin-portal.fullname" . }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
       - name: {{ .Chart.Name }}
@@ -31,15 +34,9 @@ spec:
         - name: http
           containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
-        env:
-        - name: REACT_APP_OAUTH_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "uidam-portal.fullname" . }}-credentials
-              key: clientSecret
         envFrom:
         - configMapRef:
-            name: {{ include "uidam-portal.fullname" . }}
+            name: {{ include "uidam-web-admin-portal.fullname" . }}-secrets
         livenessProbe:
           httpGet:
             path: /health
@@ -67,13 +64,13 @@ spec:
       volumes:
       - name: nginx-config
         configMap:
-          name: {{ include "uidam-portal.fullname" . }}
+          name: {{ include "uidam-web-admin-portal.fullname" . }}
           items:
           - key: nginx.conf
             path: nginx.conf
       - name: app-config
         configMap:
-          name: {{ include "uidam-portal.fullname" . }}
+          name: {{ include "uidam-web-admin-portal.fullname" . }}
           items:
           - key: config.json
             path: config.json

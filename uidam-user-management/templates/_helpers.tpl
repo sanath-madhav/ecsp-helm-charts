@@ -49,3 +49,12 @@ Selector labels
 app.kubernetes.io/name: {{ include "uidam-user-management.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Check if a tenant is enabled based on tenantIds
+*/}}
+{{- define "uidam-user-management.isTenantEnabled" -}}
+{{- $tenantId := . -}}
+{{- $tenantIds := $.Values.multiTenant.tenantIds | split "," -}}
+{{- has $tenantId $tenantIds -}}
+{{- end }}

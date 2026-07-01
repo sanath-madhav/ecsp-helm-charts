@@ -1,0 +1,10 @@
+apiVersion: vault.harman.com/v1alpha1
+kind: VaultKubernetesRole
+metadata:
+  name: {{ include "uidam-user-management.fullname" . }}
+  labels: {{- include "uidam-user-management.labels" . | nindent 4 }}
+spec:
+  boundServiceAccountName: {{ include "uidam-user-management.fullname" . }}
+  policies:
+  - {{ include "uidam-user-management.fullname" . }}
+  vaultName: {{ .Values.vault_init.vault_secret_folder }}-role

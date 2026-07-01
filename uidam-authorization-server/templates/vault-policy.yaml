@@ -1,0 +1,13 @@
+apiVersion: vault.harman.com/v1alpha1
+kind: VaultPolicy
+metadata:
+  name: {{ include "uidam-authorization-server.fullname" . }}
+  labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+spec:
+  policyDocument: |
+    path "{{ .Values.vault.secretsEnginePath }}/data/uidam-authorization-server" {
+      capabilities = ["create", "read", "update", "delete", "list"]
+    }
+    path "database/creds/{{ .Values.vault_init.vault_secret_folder }}-postgres-role" {
+      capabilities = ["read", "list"]
+    }

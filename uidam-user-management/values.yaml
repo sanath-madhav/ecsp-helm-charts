@@ -5,9 +5,14 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/eclipseecsp/uidam-user-management
+  repository: arti.dev.ignite.harman.com:5061/ignite/uidam-user-management
   pullPolicy: IfNotPresent
-  tag: 1.2.3
+  tag: "2.1.0-20260622-124"
+
+
+imagePullSecrets:
+  - name: artifactory
+  - name: ghcr-secret
 
 nameOverride: ""
 fullnameOverride: ""
@@ -29,21 +34,11 @@ service:
   type: ClusterIP
   port: 8080
 
-ingress:
+# Config Server Configuration
+configServer:
+  host: "http://config-server:8080/config/"
   enabled: false
-  className: alb
-  groupName: ic
-  scheme: internal
-  targetType: ip
-  inboundCidrs: []
-  tls:
-    enabled: true
-    sslRedirect: false
-  additionalAnnotations: {}
-  hosts:
-  - hostPrefix: uidam-user-management
-    paths:
-    - /
+  springConfigImport: "optional:classpath:tenant-default.properties,optional:configserver:{{ .Values.configServer.host }}"
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -63,24 +58,37 @@ tolerations: []
 
 affinity: {}
 
-distributedTracing:
-  enabled: false
+environmentDomainName: local
 
-# Multi-tenant configuration
 multiTenant:
   # Global tenant settings
   tenantIds: "ecsp,sdp"
-  defaultTenant: "ecsp"
+  defaultTenant: "sdp"
   enabled: false
+  
   # Tenant configuration validation
   configValidationEnabled: false
   dbNameValidationStrategy: "NONE"
+  
+  # Tenant-specific configurations
   tenants:
     ecsp:
       tenantId: "ecsp"
       tenantName: "ECSP"
+      database:
+        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/ecsp"
+    
+    sdp:
+      tenantId: "sdp"
+      tenantName: "SDP"
+      database:
+        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/uidam_management"
+
+    default:
+      tenantId: "default"
+      tenantName: "DEFAULT"
       account:
-        accountName: "ecsp"
+        accountName: "default"
         accountType: "Root"
       user:
         passwordEncoder: "SHA-256"
@@ -90,22 +98,44 @@ multiTenant:
         externalUserDefaultStatus: ""
         userDefaultAccountName: "userdefaultaccount"
         additionalAttrCheckEnabledForSignUp: false
+        temporaryLockEnabled: true
+        temporaryLockPeriodMinutes: 30
       auth:
         adminScope: "UIDAMSystem"
       emailVerification:
         enabled: false
-        url: "https://api-gateway3.{{ .Values.environmentDomainName }}/ecsp/v1/emailVerification/%s"
+        url: "https://api-gateway3.{{ .Values.environmentDomainName }}/default/v1/emailVerification/%s"
         notificationId: "UIDAM_USER_VERIFY_ACCOUNT"
         expDays: 7
         emailRegexPatternExclude: ""
-        authServerResponseUrl: "https://oss-uidam-authorization-server.{{ .Values.environmentDomainName }}/ecsp/emailVerification/verify"
+        authServerResponseUrl: "https://uidam-authorization-server.{{ .Values.environmentDomainName }}/default/emailVerification/verify"
+        emailLogoPath: "images/default-logo.svg"
+        emailCopyright: "Copyright © 2023 HARMAN International. All Rights Reserved."
       notification:
         apiUrl: "http://notification-api-int-svc.data-platform:8080/v1/notifications/nonRegisteredUsers"
         notificationId: "uidamCustomEmailTemplate5"
+        config:
+          resolver: "internal"
+          path: "classpath:/notification/uidam-notification-config.json"
+        template:
+          engine: "thymeleaf"
+          format: "HTML"
+          resolver: "CLASSPATH"
+          prefix: "/notification/"
+          suffix: ".html"
+        email:
+          provider: "internal"
+          host: "smtp.gmail.com"
+          port: "587"
+          smtpAuth: "true"
+          smtpStartTls: "true"
+          smtpStartTlsRequired: "true"
+          smtpSSLEnabled: "false"
+          smtpDebug: "false"
       authServer:
-        hostName: "https://oss-uidam-authorization-server"
-        tokenUrl: "/ecsp/oauth2/token"
-        revokeTokenUrl: "/ecsp/revoke/revokeByAdmin"
+        hostName: "https://uidam-authorization-server"
+        tokenUrl: "/default/oauth2/token"
+        revokeTokenUrl: "/default/revoke/revokeByAdmin"
         clientId: "token-mgmt"
       clientRegistration:
         defaultStatus: "approved"
@@ -116,11 +146,15 @@ multiTenant:
       recovery:
         secretExpiresInMinutes: 15
         passwordRecoveryNotificationId: "UIDAM_USER_PASSWORD_RECOVERY"
-        authServerResetResponseUrl: "https://oss-uidam-authorization-server.{{ .Values.environmentDomainName }}/ecsp/recovery/reset/"
+        authServerResetResponseUrl: "https://uidam-authorization-server.{{ .Values.environmentDomainName }}/default/recovery/reset/"
       captcha:
         enforceAfterNoOfFailures: 1
+      mfa:
+        mfaAppName: "UIDAM"
+        backupCodesEnabled: false
+        backupCodesCount: 8
       database:
-        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/oss_ecsp"
+        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/uidam_management"
         maxPoolSize: 30
         maxIdleTime: 0
         connectionTimeoutMs: 60000
@@ -132,224 +166,176 @@ multiTenant:
         changeLog: "classpath:database.schema/master.xml"
         defaultSchema: "uidam"
         parametersSchema: "uidam"
-    sdp:
-      tenantId: "sdp"
-      tenantName: "SDP"
-      account:
-        accountName: "sdp"
-        accountType: "Root"
-      user:
-        passwordEncoder: "SHA-256"
-        maxAllowedLoginAttempts: 3
-        isUserStatusLifeCycleEnabled: false
-        externalUserPermittedRoles: "VEHICLE_OWNER"
-        externalUserDefaultStatus: ""
-        userDefaultAccountName: "userdefaultaccount"
-        additionalAttrCheckEnabledForSignUp: false
-      auth:
-        adminScope: "UIDAMSystem"
-      emailVerification:
-        enabled: false
-        authServerResponseUrl: "https://oss-uidam-authorization-server.{{ .Values.environmentDomainName }}/sdp/emailVerification/verify"
-      notification:
-        apiUrl: "http://notification-api-int-svc.data-platform:8080/v1/notifications/nonRegisteredUsers"
-        notificationId: "uidamCustomEmailTemplate5"
-      authServer:
-        hostName: "https://oss-uidam-authorization-server"
-        clientId: "token-mgmt"
-      clientRegistration:
-        defaultStatus: "approved"
-        hashAlgorithm: "SHA-256"
-      recovery:
-        secretExpiresInMinutes: 15
-        authServerResetResponseUrl: "https://oss-uidam-authorization-server.{{ .Values.environmentDomainName }}/sdp/recovery/reset/"
-      captcha:
-        enforceAfterNoOfFailures: 1
-      database:
-        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/oss_sdp"
-        prepStmtCacheSqlLimit: 2048
-      liquibase:
-        changeLog: "classpath:database.schema/master.xml"
-        parametersSchema: "uidam"
-    default:
-      tenantId: "default"
-      tenantName: "DEFAULT"
-      account:
-        accountName: "default"
-        accountType: "Root"
-      user:
-        passwordEncoder: "SHA-256"
-        additionalAttrCheckEnabledForSignUp: false
-      auth:
-        adminScope: "UIDAMSystem"
-      emailVerification:
-        enabled: false
-        emailCopyright: "Copyright © 2023 HARMAN International. All Rights Reserved."
-      notification:
-        apiUrl: "http://notification-api-int-svc.data-platform:8080/v1/notifications/nonRegisteredUsers"
-      authServer:
-        hostName: "https://uidam-authorization-server"
-        clientId: "token-mgmt"
-      clientRegistration:
-        defaultStatus: "approved"
-        hashAlgorithm: "SHA-256"
-      recovery:
-        secretExpiresInMinutes: 15
-        authServerResetResponseUrl: "https://uidam-authorization-server.{{ .Values.environmentDomainName }}/default/recovery/reset/"
-      captcha:
-        enforceAfterNoOfFailures: 1
-      database:
-        jdbcUrl: "jdbc:postgresql://postgresql.ignite-core:5432/uidam_management"
-        prepStmtCacheSqlLimit: 2048
-      liquibase:
-        changeLog: "classpath:database.schema/master.xml"
-        parametersSchema: "uidam"
 
-# Global secrets - These are shared across all tenants
-secrets:
-  liquibase_clientsecret: "ChangeMe"
-  liquibase_userpwd: "ChangeMe"
-  liquibase_usersalt: "ChangeMe"
+distributedTracing:
+  enabled: false
 
-# Tenant-specific secrets
-tenantSecrets:
-  ecsp:
-    revokeTokenClientSecret: "ChangeMe"
-    clientSecretKey: "ChangeMe"
-    clientSecretSalt: "ChangeMe"
-    liquibase_clientsecret: "ChangeMe"
-    liquibase_userpwd: "ChangeMe"
-    liquibase_usersalt: "ChangeMe"
-  sdp:
-    revokeTokenClientSecret: "ChangeMe"
-    clientSecretKey: "ChangeMe"
-    clientSecretSalt: "ChangeMe"
-    liquibase_clientsecret: "ChangeMe"
-    liquibase_userpwd: "ChangeMe"
-    liquibase_usersalt: "ChangeMe"
-  default:
-    revokeTokenClientSecret: "ChangeMe"
-    clientSecretKey: "ChangeMe"
-    clientSecretSalt: "ChangeMe"
-    liquibase_clientsecret: "ChangeMe"
-    liquibase_userpwd: "ChangeMe"
-    liquibase_usersalt: "ChangeMe"
-
-# Legacy configuration for backward compatibility
-userManagementUrl: uidam-user-management:8080
-environmentDomainName: TO-BE-UPDATED
+vault:
+  url: https://vault.infra:8200
+  secretsEnginePath: secret
 
 javaOpts: -Xms128m -Xmx512m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxMetaspaceSize=256m
 
 logging:
   level: INFO
+  loggingLevelRoot: "INFO"
+  graylog:
+    enable: "true"
+    host: graylog3-tcp.graylog.svc.cluster.local
+    port: "12201"
+    neverBlockForGraylog: "true"
+  logFolder: "logs/"
+  logLevel: "INFO"
+  igniteLoglevel: "INFO"
+  svcLogLevel: INFO
+  storageLogLevel: ERROR
+  springLogLevel: ERROR
+  registryCommonLogLevel: INFO
+  propLoadLogLevel: INFO
+  logAppender: "ASYNC-GELF"
+
+apiGateway:
+  registryEnabled: "true"
+  securityEnabled: "false"
+  gatewayUrls: "https://api-gateway3.{{ .Values.environmentDomainName }}/"
+  registryServiceName: "http://api-registry-int-svc.data-platform"
+  gatewayServiceName: "http://api-gateway3-int-svc.data-platform"
+  cachingTtl: "10"
+  cacheSize: "50"
+
+passwordEncoder: "SHA-256"
+
+passwordPolicyUpdateIntervalMs: "60000"
 
 postgres:
-  host: postgresql # change this to your database host
-  port: 5432 # change this to your database port
-  secretName: uidam-user-management-credentials
-  userName: TO-BE-UPDATED
-  password: TO-BE-UPDATED
-  schemaName: "uidam"
-  databaseName: eclipseecsp
+  # Infrastructure settings
+  host: postgresql.ignite-core
+  connection: postgresql
+  port: 5432
+  
+  # Database names
+  default_dbname: postgresql
+  uidam_dbname: uidam_management
+  
+  # Connection pool settings
+  max_pool_size: "30"
   max_idle_time: "0"
+  connection_timeout_ms: "60000"
+  expected99thPercentileMs: "60000"
+  
+  # Connection retry settings
+  create_retry_count: '3'
+  retry_delay_ms: '30'
+  
+  # Data source properties
   data_source_properties:
     cachePrepStmts: "true"
     prepStmtCacheSize: "250"
     prepStmtCacheSqlLimit: "2048"
-  connection_timeout_ms: "60000"
-  expected99thPercentileMs: "60000"
-  max_pool_size: "30"
-  liquibase:
-    clientsecret: ChangeMe
-    userpwd: ChangeMe
-    usersalt: ChangeMe
-
-postgresql:
-  host: postgresql
-  connection: postgresql
-  port: 5432
-  secretName: uidam-user-management-credentials
-  userName: ChangeMe
-  password: ChangeMe
+  
+  # Vault integration
+  vault:
+    enabled: "true"
+    leaseIntervalGap: "300000"
+    refreshCheckInterval: "60000"
+  
+  # Database initializer
   initializer:
     image:
-      repository: docker.io/eclipseecsp/postgresql-initializer
-      tag: 1.0.0
-
-max_pool_size: "30"
-
-health:
-  postgresdb:
-    monitor:
-      enabled: "true"
-      restart_on_failure: "true"
-metrics:
-  prometheus:
-    enabled: "false"
-    agent:
-      port: "9100"
-      port_exposed: "9100"
-  postgresdb:
+      repository: arti.dev.ignite.harman.com:5061/hctl/postgresql-initializer
+      tag: 1.0.0-updateforschema-3dc4b4f
+      pullPolicy: Always
+  
+  # Metrics configuration
+  metrics:
     enabled: "false"
     executor_shutdown_buffer_ms: "2000"
     thread:
       freq_ms: "5000"
       intial_delay_ms: "2000"
-    
-auth:
-  server:
-    host: "https://uidam-authorization-server"
-    token_url: "/oauth2/token"
-    revoke_token_url: "/revoke/revokeByAdmin"
 
-user_status_life_cycle_enabled: "false"
-revoke_token_client_id: "token-mgmt"
-revokeTokenClientSecret: ChangeMe
-clientsecretkey: ChangeMe
-clientsecretsalt: ChangeMe
-userDefaultAccountName: "userdefaultaccount"
-external_user_permitted_roles: "VEHICLE_OWNER"
-external_user_default_status: ""
-maxAllowedLoginAttempts: "3"
-minPasswordLength: "10"
-maxPasswordLength: "15"
-passwordUpdateTimeInterval: "1"
-additional_attr_check_enabled_for_sign_up: false
+vault_init:
+  enabled: "true"
+  vault_server_ipaddress: "vault.infra"
+  vault_server_port_number: "8200"
+  vault_secret_folder: "uidam-user-management"
+  vault_service_component_name: "uidam-user-management"
+  secure_http: "true"
+
+health:
+  vault:
+    monitor:
+      enabled: "true"
+    needs_restart_on_failure: "true"
+  postgresdb:
+    monitor:
+      enabled: "false"
+      restart_on_failure: "false"
+
+# Health probes configuration
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /actuator/health/readiness
+    port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+metrics:
+  basePath: "/actuator"
+  prometheus:
+    enabled: "true"
+    path: /prometheus
+    agent:
+      port: "9100"
+      port_exposed: "9100"
+  datadog:
+    enabled: "false"
+    uri: "https://api.datadoghq.eu"
+    apiKey: "*******"
+    applicationKey: "********"
+    descriptions: "true"
+    readTimeout: "5s"
+    connectTimeout: "5s"
+    batchSize: "1000"
+    step: "1m"
+  tags:
+    envName: "dev"
+    product: "UIDAM"
+    service: "UIDAM-User-Managment"
+
 uidam:
-  db_schema: "eclipseecsp"
-  account_id: "TO-BE-UPDATED"
-  account_name: "TO-BE-UPDATED"
-  account_type: "TO-BE-UPDATED"
   auth:
     admin_scope: "UIDAMSystem"
-  openapi_path_include: "/v1/users/self, /v1/users/filter, /v1/users, /v1/users/{id}, /v1/users/details/{id}, /v1/users/delete/{id}, /v1/users/update/{id}, /v1/users/self/settings, /v1/users/self/settings/**, /v1/emailVerification/{userId}/isEmailVerified, /v1/emailVerification/{token}, /v1/oauth2/client/**, /v1/oauth2/client/{clientId}, /v1/oauth2/client, /v1/roles/**, /v1/roles/filter, /v1/roles/{name}, /v1/roles/rolesById, /v1/roles, /v1/scopes/**, /v1/scopes/{name}, /v1/scopes/filter,/v1/accounts,/v1/accounts/{id},/v1/accounts/filter,/v1/accounts/**, /v1/users/status, /v1/users/external/{id}"
+  db_schema: "uidam"
 
-api_gateway:
-  uri: "https://api-gateway.example.com"
-  serviceUrl: "api-gateway-int-svc:7000" # change this to your api gateway uri
-
+## notification config
 notification:
   # email_provider "internal" for spring mail
   # email_provider "ignite" for notification center
   email:
     provider: "internal"
-    host: "TO-BE-UPDATED" # this will override the email host
-    port: "587" # this will override the email port
-    username: "TO-BE-UPDATED" # this will override the email username
-    passwd: "TO-BE-UPDATED" # this will override the email password
+    host: "email-smtp.us-east-1.amazonaws.com"
+    port: "587"
     smptAuth: "true"
     smptStartTls: "true"
     smptStartTlsRequired: "true"
     smptSSLEnabled: "false"
     smtpDebug: "false"
-    overrideSender: "admin@example.com" # this will override the from email available in notification config
+    overrideSender: "admin@harman.com" # this will override the from email available in notification config
+    # if enabled will overrride the email provider host,port in the template
     mailingService:
-    # if enabled will overrride the email host, port in the template
       enabled: false
       url: mailing-service
       port: "587"
-  secretName: uidam-user-management-credentials
   config:
     createDefault: true
     configName: "uidam-user-management-notification-config"

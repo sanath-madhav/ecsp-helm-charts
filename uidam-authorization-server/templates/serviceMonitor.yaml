@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "uidam-authorization-server.fullname" . }}-monitor
+  labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.metrics.prometheus.agent.port_exposed }}
+    targetPort: {{ .Values.metrics.prometheus.agent.port }}
+    protocol: TCP
+    name: metrics
+  selector: {{- include "uidam-authorization-server.selectorLabels" . | nindent 4 }}
+  
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "uidam-authorization-server.fullname" . }}
+  labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}  
+spec:
+  endpoints:
+  - honorLabels: true
+    port: metrics
+    path: {{ .Values.metrics.basePath }}{{ .Values.metrics.prometheus.path }}
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels: {{- include "uidam-authorization-server.selectorLabels" . | nindent 6 }}

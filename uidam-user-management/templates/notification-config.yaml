@@ -17,7 +17,7 @@ data:
                     "locale": "en_US",
                     "default": "true",
                     "brand": "default",
-                    "from": "{{ .Values.notification.email.overrideSender | default "admin@eclipse-ecsp.com" }}",
+                    "from": "{{ .Values.notification.email.overrideSender | default "admin@harman.com" }}",
                     "subject": "UIDAM Email Verification",
                     "reference-html": "htmls/thymeleaf-template.html",
                     "images": {
@@ -28,7 +28,7 @@ data:
                         "salutation": "Greetings [[${name}]]!",
                         "body": "Please verify your UIDAM account that is associated with this email address.<br/><a th:href=\"${emailLink}\">Verify My Email</a><br/>If clicking the button doesn't seem to work, you can copy and paste the following link into your browser.<br/>[[${emailLink}]]",
                         "footer": "Thanks",
-                        "sender": "{{ .Values.notification.email.overrideSender | default "admin@eclipse-ecsp.com" }}"
+                        "sender": "{{ .Values.notification.email.overrideSender | default "admin@harman.com" }}"
                     }
                 }
             ]
@@ -43,7 +43,7 @@ data:
                 {
                     "locale": "en_US",
                     "default": "true",
-                    "from": "{{ .Values.notification.email.overrideSender | default "admin@eclipse-ecsp.com" }}",
+                    "from": "{{ .Values.notification.email.overrideSender | default "admin@harman.com" }}",
                     "subject": "UIDAM notification",
                     "reference-html": "htmls/thymeleaf-template.html",
                     "images": {
@@ -54,7 +54,7 @@ data:
                         "salutation": "Greetings [[${name}]]!",
                         "body": "We received a request to reset the password for the [[${email}]] account that is associated with this email address. If you made this request, please click the button below to securely reset your password. <br/><a th:href=\"${changePasswordUrl}\">Reset Password</a><br /> If clicking the button doesn't seem to work, you can copy and paste the following link into your browser.<br/>[[${changePasswordUrl}]]<br/> If you did not request to have your password reset, disregard this email and no changes to your account will be made.",
                         "footer": "Thanks",
-                        "sender": "{{ .Values.notification.email.overrideSender | default "admin@eclipse-ecsp.com" }}"
+                        "sender": "{{ .Values.notification.email.overrideSender | default "admin@harman.com" }}"
                     }
                 }
             ]

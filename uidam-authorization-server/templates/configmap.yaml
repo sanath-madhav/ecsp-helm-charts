@@ -3,173 +3,102 @@ kind: ConfigMap
 metadata:
   name: {{ include "uidam-authorization-server.fullname" . }}
   labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+  annotations:
+    vault.security.banzaicloud.io/mutate-configmap: "true"
 data:
-  # Global Configuration
+  # Global application settings aligned with application.properties
   SPRING_AUTH_PROXY_PORT_HTTPS: "9443"
   SPRING_AUTH_PROXY_PORT: "9000"
-  POSTGRES_DATASOURCE: "jdbc:postgresql://{{ .Values.postgresql.host }}:{{ .Values.postgresql.port}}/{{ .Values.postgres.uidam_dbname }}"
   SPRING_AUTH_PROXY_HOSTNAME: {{ (first .Values.ingress.hosts).hostPrefix }}.{{ .Values.environmentDomainName }}
-  UI_TEMPLATE_PATH: {{ .Values.uiTemplatePath  | quote}}
-  UI_STATIC_PATH: {{ .Values.uiStaticPath  | quote}}
-  GRAYLOG_ENABLED: {{ .Values.graylog.enabled | quote }}
-  GRAYLOG_HOST: graylog3-tcp.graylog.svc.cluster.local
-  GRAYLOG_PORT: "12201"
-  NEVER_BLOCK_FOR_GRAYLOG: "false"
-  LOG_FOLDER: logs/
+  UIDAM_OAUTH2_TOKEN_HASH_ALGORITHM: {{ .Values.uidam.oauth2.tokenHashAlgorithm | quote }}
+  SECURITY_CLIENT_BCRYPT_STRENGTH: {{ .Values.security.client.bcryptStrength | quote }}
+  UI_TEMPLATE_PATH: {{ .Values.ui.templatePath | quote }}
+  UI_STATIC_PATH: {{ .Values.ui.staticPath | quote }}
+
+  # Config Server Configuration
+  CONFIG_SERVER_HOST: {{ .Values.configServer.host | quote }}
+  CONFIG_SERVER_ENABLED: {{ .Values.configServer.enabled | quote }}
+  SPRING_CLOUD_CONFIG_ENABLED: {{ .Values.configServer.enabled | quote }}
+  UIDAM_CONFIG_IMPORT: {{ .Values.configServer.springConfigImport | quote }}
+
+  # Multi-tenant configuration (centralized using tenantIds)
+  TENANT_MULTITENANT_ENABLED: {{ .Values.multiTenant.enabled | quote }}
+  {{- if not .Values.configServer.enabled }}
+  TENANT_IDS: {{ .Values.multiTenant.tenantIds | quote }}
+  {{- end }}
+  TENANT_DEFAULT: {{ .Values.multiTenant.defaultTenant | quote }}
+  #DEFAULT_TENANT_ID: {{ .Values.multiTenant.defaultTenant | quote }}
+  
+  # Tenant configuration validation
+  TENANT_CONFIG_VALIDATION_ENABLED: {{ .Values.multiTenant.configValidationEnabled | quote }}
+  UIDAM_TENANT_CONFIG_DBNAME_VALIDATION: {{ .Values.multiTenant.dbNameValidationStrategy | quote }}
+  
+  # User Management Base URL
+  USER_MANAGEMENT_ENV: "http://uidam-user-management:8080"
+  
+  # Graylog Configuration aligned with application.properties
+  GRAYLOG_ENABLED: {{ .Values.logging.graylog.enabled | quote }}
+  GRAYLOG_HOST: {{ .Values.logging.graylog.host | quote }}
+  GRAYLOG_PORT: {{ .Values.logging.graylog.port | quote }}
+  NEVER_BLOCK_FOR_GRAYLOG: {{ .Values.logging.graylog.neverBlockForGraylog | quote }}
+  LOG_FOLDER: "logs/"
   LOG_LEVEL: {{ .Values.logging.logLevel | quote }}
   IGNITE_LOG_LEVEL: {{ .Values.logging.igniteLogLevel | quote }}
   SVC_LOG_LEVEL: {{ .Values.logging.svcLogLevel | quote }}
   STORAGE_LOG_LEVEL: {{ .Values.logging.storageLogLevel | quote }}
   SPRING_LOG_LEVEL: {{ .Values.logging.springLogLevel | quote }}
-  LOG_APPENDER: "STDOUT"
-
-  # MultiTenant Global Configuration
-  {{- if .Values.multiTenant }}
-  TENANT_MULTITENANT_ENABLED: {{ .Values.multiTenant.enabled | quote }}
-  TENANT_IDS: {{ .Values.multiTenant.tenantIds | quote }}
-  DEFAULT_TENANT: {{ .Values.multiTenant.defaultTenant | quote }}
-  {{- end }}
-
-  # Tenant configuration validation
-  TENANT_CONFIG_VALIDATION_ENABLED: {{ .Values.multiTenant.configValidationEnabled | quote }}
-  UIDAM_TENANT_CONFIG_DBNAME_VALIDATION: {{ .Values.multiTenant.dbNameValidationStrategy | quote }}
-
-  # Default Tenant Configuration (only properties with "ChangeMe" values in tenant-default.properties)
-  DEFAULT_POSTGRES_DATASOURCE: "jdbc:postgresql://{{ .Values.postgresql.host }}:{{ .Values.postgresql.port}}/{{ .Values.postgres.uidam_dbname }}"
-  DEFAULT_KEYSTORE_JKS_ENCODED_CONTENT: {{ .Values.multiTenant.tenants.sdp.keyStore.jksEncodedContent | quote }}
+  PROP_LOAD_LOG_LEVEL: {{ .Values.logging.propLoadLogLevel | quote }}
+  # Cache Configuration aligned with application.properties
+  CACHE_EXPIRE_MINS: "60"
+  CACHE_MAX_SIZE: "100"
+  CACHE_CLIENT_IDS: "token-mgmt,device-mgmt"
   
-  # UIDAM Configuration
-  UIDAM_DEFAULT_DB_SCHEMA: {{ .Values.uidam.defaultDbSchema | quote }}
-
-  # Security Configuration
-  SECURITY_CLIENT_BCRYPT_STRENGTH: {{ .Values.security.client.bcryptStrength | quote }}
-
-  # UI Configuration
-  UI_TEMPLATE_PATH_CONFIG: {{ .Values.ui.templatePath | quote }}
-  UI_STATIC_PATH_CONFIG: {{ .Values.ui.staticPath | quote }}
-
-  # Cache Configuration
-  CACHE_EXPIRE_MINS: {{ .Values.cache.expireMinutes | quote }}
-  CACHE_MAX_SIZE: {{ .Values.cache.maxSize | quote }}
-  CACHE_CLIENT_IDS: {{ .Values.cache.clientIds | quote }}
-
   # Cleanup Job Configuration
-  CLEANUP_JOB_BATCH_SIZE: {{ .Values.cleanupJob.batchSize | quote }}
-  CLEANUP_JOB_SCHEDULING_RATE_CRON: {{ .Values.cleanupJob.schedulingRateCron | quote }}
-  CLEANUP_JOB_RETRY_ATTEMPTS: {{ .Values.cleanupJob.retryAttempts | quote }}
-  CLEANUP_JOB_TOKEN_EXPIRES_DAYS: {{ .Values.cleanupJob.tokenExpiresDays | quote }}
-
-  # JKS Configuration
-  JKS_ENABLED: {{ .Values.jks.enabled | quote }}
-
-  # User Management Integration
-  USER_MANAGEMENT_BASE_URL: {{ .Values.userManagement.baseUrl | quote }}
-
-  # Server Configuration
-  SERVER_SERVLET_SESSION_TIMEOUT: {{ .Values.server.servlet.sessionTimeout | quote }}
-
-  # User Session Configuration
-  USER_SESSION_FORCE_LOGIN: {{ .Values.user.session.forceLogin | quote }}
-
-  # Health Configuration
-  HEALTH_SERVICE_EXECUTOR_INITIAL_DELAY: {{ .Values.health.service.executorInitialDelay | quote }}
-  HEALTH_SERVICE_RETRY_INTERVAL_MILLIS: {{ .Values.health.service.retryIntervalMillis | quote }}
-  HEALTH_POSTGRESDB_MONITOR_ENABLED: {{ .Values.health.postgresdb.monitor.enabled | quote }}
-  HEALTH_POSTGRESDB_RESTART_ON_FAILURE: {{ .Values.health.postgresdb.monitor.restartOnFailure | quote }}
-
-  # CORS Configuration
-  CORS_ALLOWED_ORIGIN_PATTERNS: {{ .Values.cors.allowedOriginPatterns | quote }}
-  CORS_ALLOWED_METHODS: {{ .Values.cors.allowedMethods | quote }}
-
-  # Logout Configuration
-  LOGOUT_REDIRECT_WHITELISTED_CUSTOM_HOSTS: {{ .Values.logout.redirect.whitelistedCustomHosts | quote }}
-
-  # Legacy tenant configuration for backward compatibility
-  CACHE_EXPIRE_MINS_LEGACY: {{ .Values.tenant.cache.expiration | quote }}
-  CACHE_MAX_SIZE_LEGACY: {{ .Values.tenant.cache.maxsize | quote }}
-  CACHE_CLIENT_IDS_LEGACY: {{ .Values.tenant.cache.clientids | quote }}  # Legacy tenant configuration for backward compatibility
-  TENANT_ID: {{ .Values.tenant.tenantId | quote }}
-  TENANT_NAME: {{ .Values.tenant.tenantName | quote }}
-  JKS_ENABLED_LEGACY: {{ .Values.tenant.jksEnabled | quote }}
-  TENANT_ALIAS: {{ .Values.tenant.alias | quote }}
-  TENANT_ACCOUNT_ID: {{ .Values.tenant.account.accountId | quote }}
-  TENANT_ACCOUNT_NAME: {{ .Values.tenant.account.accountName | quote }}
-  TENANT_ACCOUNT_TYPE: {{ .Values.tenant.account.accountType | quote }}
-  ACCOUNT_FIELD_ENABLED: {{ .Values.tenant.account.accountFieldEnabled | quote }}
-  TENANT_CLIENT_ACCESS_TOKEN_TTL: {{ .Values.tenant.client.accessTokenTtl | quote }}
-  TENANT_CLIENT_ID_TOKEN_TTL: {{ .Values.tenant.client.idTokenTtl | quote }}
-  TENANT_CLIENT_REFRESH_TOKEN_TTL: {{ .Values.tenant.client.refreshTokenTtl | quote }}
-  TENANT_CLIENT_AUTH_CODE_TTL: {{ .Values.tenant.client.authCodeTtl | quote }}
-  TENANT_OAUTH_SCOPE_CUSTOMIZATION: {{ .Values.tenant.client.oauthScopeCustomization | quote }}
-  TENANT_USER_CAPTCHA_AFTER_INVALID_FAILURES: {{ .Values.tenant.user.captchaAfterInvalidFailures | quote }}
-  TENANT_USER_CAPTCHA_REQUIRED: {{ .Values.tenant.user.captchaRequired | quote }}
-  TENANT_USER_MAX_ALLOWED_LOGIN_ATTEMPTS: {{ .Values.tenant.user.maxAllowedLoginAttempts | quote }}
-  TENANT_USER_DEFAULT_ROLE: {{ .Values.tenant.user.defaultRole | quote }}
-  TENANT_SIGN_UP_ENABLED: {{ .Values.tenant.user.signUpEnabled | quote }}
-  TENANT_CAPTCHA_RECAPTCHA_VERIFY_URL: {{ .Values.tenant.captcha.recaptchaVerifyUrl | quote }}
-  TENANT_CAPTCHA_RECAPTCHA_KEY_SITE: {{ .Values.tenant.captcha.recaptchaKeySite | quote }}
-  TENANT_PASSWORD_RECOVERY_URL: https://{{ (first .Values.ingress.hosts).hostPrefix }}.{{ .Values.environmentDomainName }}/recovery
-  TENANT_EXTERNAL_IDP_ENABLED: {{ .Values.tenant.externalIdpEnabled | quote}}
-  CREATE_FEDRATED_USER_ENDPOINT: {{ .Values.tenant.externalUrls.createFedratedUserEndpoint | quote }}
-  TENANT_INTERNAL_LOGIN_ENABLED: {{ .Values.tenant.internalLoginEnabled | quote}}
-  USER_MANAGEMENT_ENV: {{ .Values.tenant.externalUrls.userManagementUrl | quote}}
-  CLIENT_BY_CLIENT_ID_ENDPOINT: {{ .Values.tenant.externalUrls.clientByClientIdEndpoint | quote}}
-  USER_BY_USERNAME_ENDPOINT: {{ .Values.tenant.externalUrls.userByUsernameEndpoint | quote}}
-  ADD_USER_EVENTS_ENDPOINT: {{ .Values.tenant.externalUrls.addUserEventsEndpoint | quote}}
-  USER_RECOVERY_NOTIFICATION_ENDPOINT: {{ .Values.tenant.externalUrls.recoveryNotificationEndpoint | quote }}
-  USER_UPDATE_PASSWORD_USING_RECOVERY_SECRET_ENDPOINT: {{ .Values.tenant.externalUrls.updatePasswordUsingSecretEndpoint | quote }}
-  CREATE_USER_ENDPOINT: {{ .Values.tenant.externalUrls.selfCreateUserEndpoint | quote }}
-  PASSWORD_POLICY_ENDPOINT: {{ .Values.tenant.externalUrls.passwordPolicyEndpoint | quote }}
-  CREATE_FEDRATED_USER_ENDPOINT: {{ .Values.tenant.externalUrls.createFedratedUserEndpoint | quote }}
-  KEYSTORE_FILE_NAME: {{ .Values.tenant.keyStore.keyStoreFilename | quote}}
+  CLEANUP_JOB_BATCH_SIZE: "50000"
+  CLEANUP_JOB_SCHEDULING_RATE_CRON: "0 0 */6 * * *"
+  CLEANUP_JOB_SCHEDULING_RETRY_ATTEMPTS: "3"
+  CLEANUP_TOKEN_EXPIRES_BEFORE_IN_DAYS: "1"
+  
+  # SSL/JKS Configuration
+  JKS_ENABLED: "true"
   KEYSTORE_ALIAS: {{ .Values.tenant.keyStore.keyAlias | quote }}
+  KEYSTORE_FILE_NAME: {{ .Values.tenant.keyStore.keyStoreFilename | quote}}
+  KEYSTORE_PASS: vault:{{ .Values.vault.secretsEnginePath }}/data/{{ include "uidam-authorization-server.fullname" . }}#keystorePassword
   KEYSTORE_TYPE: {{ .Values.tenant.keyStore.keyType | quote}}
+  
+  # JWT Configuration
   JWT_PUBLIC_KEY: {{ .Values.tenant.cert.jwtPublicKey | quote }}
   JWT_PRIVATE_KEY: {{ .Values.tenant.cert.jwtPrivateKey | quote }}
   JWT_KEY_ID: {{ .Values.tenant.cert.jwtKeyId | quote }}
-  JWT_ADDITIONAL_CLAIM_ATTRIBUTES: {{ .Values.tenant.user.jwtAdditionalClaimAttributes | quote }}
   JWT_PUBLIC_KEY_PEM_PATH: {{ .Values.tenant.keyStore.jwtPubKeyPem | quote }}
-
-  UIDAM_DEFAULT_DB_SCHEMA: {{ .Values.uidam.db_schema }}
   
-  ###Fixed Session Timeout###
-  server_servlet_session_timeout: {{ .Values.server_servlet_session_timeout | quote }}
-  session_recreation_policy: {{ .Values.session_recreation_policy | quote }}
-  ###Force user to login always in Auth Code/PKCE flow###
-  user_session_force_login: {{ .Values.user_session_force_login | quote }}
+  # Global secrets from vault
+  UIDAM_OAUTH2_TOKEN_HASH_SALT: vault:{{ .Values.vault.secretsEnginePath }}/data/{{ include "uidam-authorization-server.fullname" . }}#oauth2.tokenHashSalt
+  
+  # Database schema
+  UIDAM_DEFAULT_DB_SCHEMA: {{ .Values.uidam.db_schema | default "uidam" | quote }}
+  
+  # Session configuration aligned with application.properties
+  server_servlet_session_timeout: {{ .Values.server_servlet_session_timeout | default "5m" | quote }}
+  user_session_force_login: {{ .Values.user_session_force_login | default "true" | quote }}
+  
+  # Health and monitoring configuration
+  health_service_executor_initial_delay: "10000"
+  health_service_retry_interval_millis: "120000"
+  health_postgresdb_monitor_enabled: {{ .Values.health.postgresdb.monitor.enabled | default "false" | quote }}
+  health_postgresdb_monitor_restart_on_failure: {{ .Values.health.postgresdb.monitor.restart_on_failure | default "false" | quote }}
+  
+  # CORS configuration aligned with application.properties
+  cors_allowed_origin_patterns: "*.harmandev.com,*.harman.com,*configurator.harman.local:8080"
+  cors_allowed_methods: "GET,HEAD,POST"
+  
+  # Logout redirect configuration
+  LOGOUT_REDIRECT_WHITELISTED_CUSTOM_HOSTS: "localhost,127.0.0.1"
+  
+  # Essential database configuration (used in application.properties)
+  POSTGRES_DATASOURCE: "jdbc:postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.uidam_dbname }}"
+  POSTGRES_USERNAME: vault:{{ .Values.vault.secretsEnginePath }}/data/{{ include "uidam-authorization-server.fullname" . }}#username
+  POSTGRES_PASSWORD: vault:{{ .Values.vault.secretsEnginePath }}/data/{{ include "uidam-authorization-server.fullname" . }}#password
 
-  # Metrics configuration (used in application.properties)
-  metrics_prometheus_enabled: {{ .Values.metrics.prometheus.enabled | default "false" | quote }}
-  prometheus_agent_port: {{ .Values.metrics.prometheus.agent.port | default "9100" | quote }}
-  prometheus_agent_port_exposed: {{ .Values.metrics.prometheus.agent.port_exposed | default "9100" | quote }}
-  metrics_prometheus_path: {{ .Values.metrics.prometheus.path | default "/prometheus" | quote }}
-  metrics_basePath: {{ .Values.metrics.basePath | default "/actuator" | quote }}
-  metrics_datadog_enabled: {{ .Values.metrics.datadog.enabled | default "false" | quote }}
-  metrics_datadog_descriptions: {{ .Values.metrics.datadog.descriptions | default "true" | quote }}
-  metrics_datadog_uri: {{ .Values.metrics.datadog.uri | default "https://api.datadoghq.com" | quote }}
-  metrics_datadog_step: {{ .Values.metrics.datadog.step | default "60s" | quote }}
-  metrics_datadog_readTimeout: {{ .Values.metrics.datadog.readTimeout | default "10000" | quote }}
-  metrics_datadog_connectTimeout: {{ .Values.metrics.datadog.connectTimeout | default "10000" | quote }}
-  metrics_datadog_batchSize: {{ .Values.metrics.datadog.batchSize | default "20" | quote }}
-  # Metrics Tags
-  management_metrics_tags_env: {{ .Values.metrics.tags.envName | default "dev" | quote }}
-  management_metrics_tags_product: {{ .Values.metrics.tags.product | default "UIDAM" | quote }}
-  management_metrics_tags_service: {{ .Values.metrics.tags.service | default "UIDAM-Authorization-Server" | quote }}
-
-  ###DAO Configuration###
-  health_postgresdb_monitor_enabled: {{ .Values.health.postgresdb.monitor.enabled | quote }}
-  health_postgresdb_monitor_restart_on_failure: {{ .Values.health.postgresdb.monitor.restart_on_failure | quote}}
-  postgres_max_pool_size: {{ .Values.postgres.max_pool_size | quote }}
-  metrics_prometheus_enabled: {{ .Values.metrics.prometheus.enabled | quote}}
-  postgres_max_idle_time: {{ .Values.postgres.max_idle_time | quote }}
-  postgres_data_source_properties_cachePrepStmts: {{ .Values.postgres.data_source_properties.cachePrepStmts | quote }}
-  postgres_data_source_properties_prepStmtCacheSize: {{ .Values.postgres.data_source_properties.prepStmtCacheSize | quote }}
-  postgres_data_source_properties_prepStmtCacheSqlLimit: {{ .Values.postgres.data_source_properties.prepStmtCacheSqlLimit | quote }}
-  prometheus_agent_port: {{ .Values.metrics.prometheus.agent.port | quote }}
-  prometheus_agent_port_exposed: {{ .Values.metrics.prometheus.agent.port_exposed | quote }}
-  postgres_connection_timeout_ms: {{ .Values.postgres.connecion_timeout_ms | quote }}
-  postgres_expected99thPercentileMs: {{ .Values.postgres.expected99thPercentileMs | quote }}
-  postgresdb_metrics_enabled: {{ .Values.postgresdb.metrics.enabled | quote}}
-  postgresdb_metrics_executor_shutdown_buffer_ms: {{ .Values.postgresdb.metrics.executor_shutdown_buffer_ms | quote }}
-  postgresdb_metrics_thread_freq_ms: {{ .Values.postgresdb.metrics.thread.freq_ms | quote }}
-  postgresdb_metrics_thread_initial_delay_ms: {{ .Values.postgresdb.metrics.thread.intial_delay_ms | quote }}
+  POSTGRES_MAX_POOL_SIZE: {{ .Values.postgres.max_pool_size | quote }}
+  POSTGRES_MAX_IDLE_TIME: {{ .Values.postgres.max_idle_time | quote }}

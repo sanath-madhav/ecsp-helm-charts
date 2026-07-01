@@ -1,11 +1,11 @@
 {{- if .Values.ingress.enabled -}}
-{{- $fullName := include "uidam-portal.fullname" . -}}
+{{- $fullName := include "uidam-web-admin-portal.fullname" . -}}
 {{- $root := . -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
-  labels: {{- include "uidam-portal.labels" . | nindent 4 }}
+  labels: {{- include "uidam-web-admin-portal.labels" . | nindent 4 }}
   annotations:
     alb.ingress.kubernetes.io/backend-protocol: HTTP
     alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.scheme }}

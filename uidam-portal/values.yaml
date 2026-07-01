@@ -1,13 +1,25 @@
-# Default values for uidam-portal.
+# Default values for uidam-web-admin-portal.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
 replicaCount: 1
 
 image:
-  repository: docker.io/eclipseecsp/uidam-portal
+  repository: eclipseecsp/uidam-portal
   pullPolicy: IfNotPresent
-  tag: "1.0.0"
+  tag: "1.4.2"
+
+imagePullSecrets:
+  - name: artifactory
+  - name: ghcr-secret
 
 nameOverride: ""
 fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
 
 podAnnotations: {}
 
@@ -21,9 +33,6 @@ securityContext: {}
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
   # runAsUser: 1000
-
-logging:
-  level: INFO
 
 service:
   type: ClusterIP
@@ -42,9 +51,9 @@ ingress:
     sslRedirect: false
   additionalAnnotations: {}
   hosts:
-  - hostPrefix: uidam-portal
-    paths:
-    - /
+    - hostPrefix: uidam-web-admin-portal
+      paths:
+        - /
 
 resources:
   limits:
@@ -55,26 +64,70 @@ resources:
     memory: 128Mi
 
 # Node selector for pod placement
+# Uncomment and configure if your cluster uses node labels for workload isolation
 nodeSelector: {}
+  # Example:
+  # node.ignite.harman.com/uidam: "worker"
 
 tolerations: []
 
 # Pod affinity/anti-affinity rules
+# Uncomment if you need specific pod placement or high availability
 affinity: {}
+  # Example node affinity:
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: node.ignite.harman.com/uidam
+  #         operator: In
+  #         values: ["worker"]
+  #
+  # Example pod anti-affinity for high availability:
+  # podAntiAffinity:
+  #   preferredDuringSchedulingIgnoredDuringExecution:
+  #   - weight: 100
+  #     podAffinityTerm:
+  #       topologyKey: kubernetes.io/hostname
+  #       labelSelector:
+  #         matchLabels:
+  #           app.kubernetes.io/name: uidam-web-admin-portal
 
 # Environment-specific configuration
 environmentDomainName: local
 
 # Backend API endpoints configuration
+# These will be used to configure the React app at runtime
 apiEndpoints:
-  authorizationServer: "https://uidam-authorization-server.local/sdp"
-  userManagement: "http://uidam-user-management:8080"
-
+  authorizationServer: "https://uidam-authorization-server.local"
+  userManagement: "https://api-gateway3.local"
 # OAuth configuration for the portal
 oauth:
-  clientId: "uidam-portal-client"
-  # clientSecret should be provided via Kubernetes secret
-  usePKCE: false
+  clientId: "test-portal"
+  usePKCE: true # PKCE (RFC 7636) eliminates the need for a client secret in the SPA
+  # clientSecret is NOT stored here — it is managed exclusively by Vault:
+  #   secret/data/uidam-web-admin-portal#clientSecret
+  # Only used as fallback when usePKCE is false (legacy flow).
+
+# Vault configuration for secrets management
+vault:
+  url: https://vault.infra:8200
+  secretsEnginePath: secret
+
+vault_init:
+  enabled: "true"
+  vault_server_ipaddress: "vault.infra"
+  vault_server_port_number: "8200"
+  vault_secret_folder: "uidam-web-admin-portal"
+  vault_service_component_name: "uidam-web-admin-portal"
+  secure_http: "true"
+
+# Health monitoring configuration
+health:
+  vault:
+    monitor:
+      enabled: "true"
+    needs_restart_on_failure: "true"
 
 # Application configuration
 app:
@@ -85,26 +138,10 @@ app:
   apiRetryDelay: 1000
   tokenStorageKey: "uidam_admin_token"
   refreshTokenStorageKey: "uidam_admin_refresh_token"
+  sessionApiPrefix: "/sdp"
 
 # Nginx configuration
 nginx:
   clientMaxBodySize: "10m"
   workerProcesses: "auto"
   workerConnections: "1024"
-
-# Secrets configuration - these will be managed via Kubernetes secrets
-secrets:
-  clientSecret: "ChangeMe"
-
-# PostgreSQL configuration
-postgresql:
-  host: postgresql
-  port: "5432"
-  secretName: uidam-portal-credentials
-
-# Metrics configuration
-metrics:
-  basePath: "/actuator"
-  prometheus:
-    agent:
-      port: 9443

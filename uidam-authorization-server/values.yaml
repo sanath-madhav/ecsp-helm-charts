@@ -1,10 +1,17 @@
 # Default values for uidam-authorization-server.
-replicaCount: 1
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
 
 image:
-  repository: docker.io/eclipseecsp/uidam-authorization-server
+  repository: arti.dev.ignite.harman.com:5061/ignite/uidam-authorization-server
   pullPolicy: IfNotPresent
-  tag: 1.2.2
+  tag: "2.1.0-20260622-263"
+
+imagePullSecrets:
+  - name: artifactory
+  - name: ghcr-secret
 
 nameOverride: ""
 fullnameOverride: ""
@@ -23,168 +30,89 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+# Config Server Configuration
+configServer:
+  host: "http://config-server:8080/config/"
+  enabled: false
+  springConfigImport: "optional:classpath:tenant-default.properties"
+
 logging:
-  level: INFO
   logLevel: "INFO"
-  igniteLogLevel: "ERROR"
+  igniteLogLevel: "INFO"
   svcLogLevel: "INFO"
   storageLogLevel: "ERROR"
   springLogLevel: "ERROR"
-
-graylog:
-  enabled: "false"
+  propLoadLogLevel: INFO
+  graylog:
+    enabled: "true"
+    host: "graylog3-tcp.graylog.svc.cluster.local"
+    port: "12201"
+    neverBlockForGraylog: "true"
 
 # Multi-tenant configuration
 multiTenant:
   # Global tenant settings
   tenantIds: "ecsp,sdp"
-  defaultTenant: "ecsp"
+  defaultTenant: "sdp"
   enabled: false
+  
   # Tenant configuration validation
   configValidationEnabled: false
   dbNameValidationStrategy: "NONE"
+  
+  # Tenant-specific configurations
   tenants:
     ecsp:
       tenantId: "ecsp"
       tenantName: "ECSP"
-      jksEnabled: true
-      externalIdpEnabled: true
-      internalLoginEnabled: true
-      externalIdpClientName: "federated-user-client"
-      account:
-        accountId: "TO-BE-UPDATED"
-        accountName: "ecsp"
-        accountType: "Root"
-        accountFieldEnabled: true
-      client:
-        accessTokenTtl: 3600
-        idTokenTtl: 3600
-        refreshTokenTtl: 3600
-        authCodeTtl: 300
-        oauthScopeCustomization: false
-        reuseRefreshToken: false
+      ui:
+        logoPath: "/images/ecsp-logo.svg"
       user:
-        captchaAfterInvalidFailures: 1
-        captchaRequired: false
-        maxAllowedLoginAttempts: 3
-        defaultRole: "VEHICLE_OWNER"
         signUpEnabled: true
-        jwtAdditionalClaimAttributes: "accountType, accountName"
-      externalUrls:
-        userManagementUrl: "http://uidam-user-management:8080"
-        clientByClientIdEndpoint: "/v1/oauth2/client/{clientId}"
-        userByUsernameEndpoint: "/v1/users/{userName}/byUserName"
-        recoveryNotificationEndpoint: "/v1/users/{userName}/recovery/forgotpassword"
-        updatePasswordUsingSecretEndpoint: "/v1/users/recovery/set-password"
-        addUserEventsEndpoint: "/v1/users/{id}/events"
-        selfCreateUserEndpoint: "/v1/users/self"
-        passwordPolicyEndpoint: "/v1/users/password-policy"
-        createFedratedUserEndpoint: "/v1/users/federated"
       keyStore:
-        keyStoreFilename: "uidamauthserver.jks"
-        keyAlias: "uidam-auth-server"
-        keyType: "JKS"
-        jwtPubKeyPem: "/app/uidam-pub-key-pem"
-        jksEncodedContent: "ChangeMe"
-      cert:
-        jwtPublicKey: "app.pub"
-        jwtPrivateKey: "app.key"
-        jwtKeyId: "TO-BE-UPDATED"
+        keyAlias: "ecsp-uidam-auth-server"
+        jwtKeyId: "845b3g-246m-8b5f-af5b-gh8c9922f14g"
       captcha:
         recaptchaVerifyUrl: "https://www.google.com/recaptcha/api/siteverify"
-        recaptchaKeySite: "ChangeMe"
+        recaptchaKeySite: "6LfjilkpAAAAAKhpGZwLlFIeTavaxs3ZeBCV2xcO"
       database:
-        jdbc_url: "jdbc:postgresql://postgresql:5432/ecsp_db"
-      externalIdpRegisteredClients:
-        - clientName: Google
-          registrationId: google
-          clientId: xxx
-          clientAuthenticationMethod: client_secret_basic
-          scope: "openid, profile, email, address, phone"
-          authorizationUri: "https://accounts.google.com/o/oauth2/v2/auth"
-          tokenUri: "https://www.googleapis.com/oauth2/v4/token"
-          userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
-          userNameAttributeName: "sub"
-          jwkSetUri: "https://www.googleapis.com/oauth2/v3/certs"
-          tokenInfoSource: "FETCH_INTERNAL_USER"
-          createUserMode: "CREATE_INTERNAL_USER"
-          defaultUserRoles: "VEHICLE_OWNER"
-          claimMappings: "firstName#given_name,lastName#family_name,email#email"
+        jdbc_url: "jdbc:postgresql://postgresql.ignite-core:5432/ecsp"
+      mfa:
+        mode: "CONDITIONAL"
+        stepUpScopes: "ManageUsers"
+        skipUsers: "admin,tenantadmin"
+    
     sdp:
       tenantId: "sdp"
       tenantName: "SDP"
-      jksEnabled: true
-      externalIdpEnabled: false
-      internalLoginEnabled: true
-      externalIdpClientName: "federated-user-client"
-      account:
-        accountId: "TO-BE-UPDATED"
-        accountName: "sdp"
-        accountType: "Root"
-        accountFieldEnabled: true
-      client:
-        accessTokenTtl: 3600
-        idTokenTtl: 3600
-        refreshTokenTtl: 3600
-        authCodeTtl: 300
-        oauthScopeCustomization: false
-        reuseRefreshToken: false
+      externalIdpEnabled: true
+      ui:
+        logoPath: "/images/sdp-logo.svg"
       user:
-        captchaAfterInvalidFailures: 1
-        captchaRequired: false
-        maxAllowedLoginAttempts: 3
-        defaultRole: "VEHICLE_OWNER"
         signUpEnabled: true
-        jwtAdditionalClaimAttributes: "accountType, accountName"
-      externalUrls:
-        userManagementUrl: "http://uidam-user-management:8080"
-        clientByClientIdEndpoint: "/v1/oauth2/client/{clientId}"
-        userByUsernameEndpoint: "/v1/users/{userName}/byUserName"
-        recoveryNotificationEndpoint: "/v1/users/{userName}/recovery/forgotpassword"
-        updatePasswordUsingSecretEndpoint: "/v1/users/recovery/set-password"
-        addUserEventsEndpoint: "/v1/users/{id}/events"
-        selfCreateUserEndpoint: "/v1/users/self"
-        passwordPolicyEndpoint: "/v1/users/password-policy"
-        createFedratedUserEndpoint: "/v1/users/federated"
       keyStore:
-        keyStoreFilename: "uidamauthserver.jks"
-        keyAlias: "uidam-auth-server"
-        keyType: "JKS"
-        jwtPubKeyPem: "/app/uidam-pub-key-pem"
-        jksEncodedContent: "ChangeMe"
-      cert:
-        jwtPublicKey: "app.pub"
-        jwtPrivateKey: "app.key"
-        jwtKeyId: "TO-BE-UPDATED"
+        keyAlias: "sdp-uidam-auth-server"
+        jwtKeyId: "845b3g-246m-8b5f-af5b-gh8c9922f14g"
       captcha:
         recaptchaVerifyUrl: "https://www.google.com/recaptcha/api/siteverify"
-        recaptchaKeySite: "ChangeMe"
+        recaptchaKeySite: "6LfjilkpAAAAAKhpGZwLlFIeTavaxs3ZeBCV2xcO"
       database:
-        jdbc_url: "jdbc:postgresql://postgresql:5432/sdp_db"
-      externalIdpRegisteredClients:
-        - clientName: Google
-          registrationId: google
-          clientId: xxx
-          clientAuthenticationMethod: client_secret_basic
-          scope: "openid, profile, email, address, phone"
-          authorizationUri: "https://accounts.google.com/o/oauth2/v2/auth"
-          tokenUri: "https://www.googleapis.com/oauth2/v4/token"
-          userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
-          userNameAttributeName: "sub"
-          jwkSetUri: "https://www.googleapis.com/oauth2/v3/certs"
-          tokenInfoSource: "FETCH_INTERNAL_USER"
-          createUserMode: "CREATE_INTERNAL_USER"
-          defaultUserRoles: "VEHICLE_OWNER"
-          claimMappings: "firstName#given_name,lastName#family_name,email#email"
+        jdbc_url: "jdbc:postgresql://postgresql.ignite-core:5432/uidam_management"
+      mfa:
+        mode: "REQUIRED"
+        skipUsers: "admin,tenantadmin"
+    
     default:
       tenantId: "default"
-      tenantName: "Default Tenant"
+      tenantName: "DEFAULT"
       jksEnabled: true
       externalIdpEnabled: false
       internalLoginEnabled: true
       externalIdpClientName: "federated-user-client"
+      ui:
+        logoPath: "/images/default-logo.svg"
       account:
-        accountId: "TO-BE-UPDATED"
+        accountId: "default-001"
         accountName: "default"
         accountType: "Root"
         accountFieldEnabled: true
@@ -194,6 +122,7 @@ multiTenant:
         refreshTokenTtl: 3600
         authCodeTtl: 300
         oauthScopeCustomization: false
+        authCodeScopelessUserScopes: true
         reuseRefreshToken: false
       user:
         captchaAfterInvalidFailures: 1
@@ -214,24 +143,88 @@ multiTenant:
         createFedratedUserEndpoint: "/v1/users/federated"
       keyStore:
         keyStoreFilename: "uidamauthserver.jks"
-        keyAlias: "uidam-auth-server"
+        keyAlias: "sdp-uidam-auth-server"
         keyType: "JKS"
         jwtPubKeyPem: "/app/uidam-pub-key-pem"
-        jksEncodedContent: "ChangeMe"
       cert:
         jwtPublicKey: "app.pub"
         jwtPrivateKey: "app.key"
-        jwtKeyId: "TO-BE-UPDATED"
+        jwtKeyId: "default-845b3g-246m-8b5f-af5b-gh8c9922f14g"
       captcha:
         recaptchaVerifyUrl: "https://www.google.com/recaptcha/api/siteverify"
-        recaptchaKeySite: "ChangeMe"
+        recaptchaKeySite: "6LfjilkpAAAAAKhpGZwLlFIeTavaxs3ZeBCV2xcO"
       database:
-        jdbc_url: "jdbc:postgresql://postgresql:5432/default_db"
-      externalIdpRegisteredClients: []
+        jdbc_url: "jdbc:postgresql://postgresql.ignite-core:5432/uidam_management"
+      mfa:
+        mfaAppName: "UIDAM"
+        mode: "DISABLED"
+        stepUpScopes: "UIDAMSystem,ManageUsers,ManageAccounts"
+        skipUsers: "admin,tenantadmin"
+        skipClients: ""
+        skipAccounts: ""
+        stepUpClients: ""
+        stepUpAccounts: ""
+      externalIdpRegisteredClients:
+        - clientName: Google
+          registrationId: google
+          enabled: false
+          clientId: 164934606922-5bmh2qqbnalohet2obvfavkierp2ulpj.apps.googleusercontent.com
+          clientAuthenticationMethod: client_secret_basic
+          scope: "openid, profile, email, address, phone"
+          authorizationUri: "https://accounts.google.com/o/oauth2/v2/auth"
+          tokenUri: "https://www.googleapis.com/oauth2/v4/token"
+          userInfoUri: "https://www.googleapis.com/oauth2/v3/userinfo"
+          userNameAttributeName: "sub"
+          jwkSetUri: "https://www.googleapis.com/oauth2/v3/certs"
+          tokenInfoSource: "FETCH_INTERNAL_USER"
+          createUserMode: "CREATE_INTERNAL_USER"
+          defaultUserRoles: "VEHICLE_OWNER"
+          claimMappings: "firstName#given_name,lastName#family_name,email#email"
+        - clientName: Github
+          registrationId: github
+          enabled: false
+          clientId: 7d5a571e8340ee69b149
+          clientAuthenticationMethod: client_secret_basic
+          scope: read:user
+          authorizationUri: https://github.com/login/oauth/authorize
+          tokenUri: https://github.com/login/oauth/access_token
+          userInfoUri: https://api.github.com/user
+          userNameAttributeName: id
+          jwkSetUri: https://www.googleapis.com/oauth2/v3/certs
+          tokenInfoSource: FETCH_INTERNAL_USER
+          createUserMode: "CREATE_INTERNAL_USER"
+          defaultUserRoles: "VEHICLE_OWNER"
+        - clientName: Cognito
+          registrationId: cognito
+          enabled: false
+          clientId: 4ptvjrj39j9tar0nrgli7vcoi3
+          clientAuthenticationMethod: client_secret_basic
+          scope: openid,profile
+          authorizationUri: https://test-domain-299.auth.us-east-1.amazoncognito.com/oauth2/authorize
+          tokenUri: https://test-domain-299.auth.us-east-1.amazoncognito.com/oauth2/token
+          userInfoUri: https://test-domain-299.auth.us-east-1.amazoncognito.com/oauth2/userInfo
+          userNameAttributeName: sub
+          jwkSetUri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_jRtxnXmK0/.well-known/jwks.json
+          tokenInfoSource: FETCH_INTERNAL_USER
+          createUserMode: "CREATE_INTERNAL_USER"
+          defaultUserRoles: "VEHICLE_OWNER"
+        - clientName: Azure
+          registrationId: azure
+          enabled: true
+          clientId: 59d375db-1c7c-4fcd-8070-ac096fef69ec
+          clientAuthenticationMethod: client_secret_post
+          scope: openid
+          authorizationUri: https://login.microsoftonline.com/f66b6bd3-ebc2-4f54-8769-d22858de97c5/oauth2/v2.0/authorize
+          tokenUri: https://login.microsoftonline.com/f66b6bd3-ebc2-4f54-8769-d22858de97c5/oauth2/v2.0/token
+          userInfoUri: https://graph.microsoft.com/oidc/userinfo
+          userNameAttributeName: sub
+          jwkSetUri: https://login.microsoftonline.com/f66b6bd3-ebc2-4f54-8769-d22858de97c5/discovery/v2.0/keys
+          tokenInfoSource: FETCH_INTERNAL_USER
+          createUserMode: "CREATE_INTERNAL_USER"
+          defaultUserRoles: "VEHICLE_OWNER"
 
 # Application Configuration
 uidam:
-  defaultDbSchema: "uidam"
   oauth2:
     tokenHashAlgorithm: "SHA-256"
 
@@ -245,170 +238,6 @@ ui:
   templatePath: "classpath:/templates/"
   staticPath: "classpath:/static"
 
-# Cache Configuration
-cache:
-  expireMinutes: "60"
-  maxSize: "100"
-  clientIds: "token-mgmt,device-mgmt"
-
-# Cleanup Job Configuration
-cleanupJob:
-  batchSize: "50000"
-  schedulingRateCron: "0 0 */6 * * *"
-  retryAttempts: "3"
-  tokenExpiresDays: "1"
-
-# JKS Configuration
-jks:
-  enabled: "true"
-
-# User Management Integration
-userManagement:
-  baseUrl: "http://uidam-user-management:8080"
-
-# Server Configuration
-server:
-  servlet:
-    sessionTimeout: "5m"
-
-# User Session Configuration
-user:
-  session:
-    forceLogin: "true"
-    executorInitialDelay: "10000"
-    retryIntervalMillis: "120000"
-
-# Health Configuration
-health:
-  service:
-    executorInitialDelay: "10000"
-    retryIntervalMillis: "120000"
-  postgresdb:
-    monitor:
-      enabled: "false"
-      restartOnFailure: "false"
-      restart_on_failure: "false"
-
-# CORS Configuration
-cors:
-  allowedOriginPatterns: "*.example.com"
-  allowedMethods: "GET,HEAD,POST"
-
-# Logout Configuration
-logout:
-  redirect:
-    whitelistedCustomHosts: "localhost,127.0.0.1"
-
-# Legacy tenant configuration for backward compatibility
-tenant:
-  tenantId: "TO-BE-UPDATED"
-  tenantName: "TO-BE-UPDATED"
-  jksEnabled: "true"
-  alias: "TO-BE-UPDATED"
-  cache:
-    expiration: "60"
-    maxsize: "100"
-    clientids: "token-mgmt,device-mgmt"
-  account:
-    accountId: "TO-BE-UPDATED"
-    accountName: "TO-BE-UPDATED"
-    accountType: "TO-BE-UPDATED"
-    accountFieldEnabled: "true"
-  client:
-    accessTokenTtl: "3600"
-    idTokenTtl: "3600"
-    refreshTokenTtl: "3600"
-    authCodeTtl: "300"
-    oauthScopeCustomization: "false"
-  user:
-    captchaAfterInvalidFailures: "1"
-    captchaRequired: "false"
-    maxAllowedLoginAttempts: "3"
-    jwtAdditionalClaimAttributes: "accountType, accountName"
-  externalUrls:
-    userManagementUrl: "http://uidam-user-management:8080"
-    clientByClientIdEndpoint: "/v1/oauth2/client/{clientId}"
-    userByUsernameEndpoint: "/v1/users/{userName}/byUserName"
-    recoveryNotificationEndpoint: "/v1/users/{userName}/recovery/forgotpassword"
-    updatePasswordUsingSecretEndpoint: "/v1/users/recovery/set-password"
-  keyStore:
-    keyStoreFilename: "uidamauthserver.jks"
-    keyAlias: "uidamauthserver"
-    keyType: "JKS"
-  cert:
-    jwtPublicKey: "app.pub"
-    jwtPrivateKey: "app.key"
-    jwtKeyId: "TO-BE-UPDATED"
-  # Please register site over google to enable google recaptcha services and update details below
-  captcha:
-    recaptchaVerifyUrl: "https://www.google.com/recaptcha/api/siteverify"
-    recaptchaKeySite: "xxx"
-  externalIdpEnabled: false
-  internalLoginEnabled: true
-  externalIdpClientName: federated-user-client
-  # Please update the below details by creating clients in respective IDPs as per the client to be configured
-  externalIdpRegisteredClients:
-    - clientName: Google
-      registrationId: google
-      clientId: xxx
-      clientSecret: xxx
-      clientAuthenticationMethod: client_secret_basic
-      scope: openid, profile, email, address, phone
-      authorizationUri: https://accounts.google.com/o/oauth2/v2/auth
-      tokenUri: https://www.googleapis.com/oauth2/v4/token
-      userInfoUri: https://www.googleapis.com/oauth2/v3/userinfo
-      userNameAttributeName: sub
-      jwkSetUri: https://www.googleapis.com/oauth2/v3/certs
-      tokenInfoSource: FETCH_INTERNAL_USER
-      createUserMode: CREATE_INTERNAL_USER
-      defaultUserRoles: VEHICLE_OWNER
-      claimMappings: firstName#given_name,lastName#family_name,email#email
-    - clientName: Github
-      registrationId: github
-      clientId: xxx
-      clientSecret: xxx
-      clientAuthenticationMethod: client_secret_basic
-      scope: read:user
-      authorizationUri: https://github.com/login/oauth/authorize
-      tokenUri: https://github.com/login/oauth/access_token
-      userInfoUri: https://api.github.com/user
-      userNameAttributeName: id
-      jwkSetUri: https://www.googleapis.com/oauth2/v3/certs
-      tokenInfoSource: FETCH_INTERNAL_USER
-      createUserMode: CREATE_INTERNAL_USER
-      defaultUserRoles: VEHICLE_OWNER
-      claimMappings: firstName#name,email#email
-    - clientName: Cognito
-      registrationId: cognito
-      clientId: xxx
-      clientSecret: xxx
-      clientAuthenticationMethod: client_secret_basic
-      scope: openid,profile
-      authorizationUri: xxx
-      tokenUri: https:xxx
-      userInfoUri: xxx
-      userNameAttributeName: sub
-      jwkSetUri: xxx
-      tokenInfoSource: FETCH_INTERNAL_USER
-      createUserMode: CREATE_INTERNAL_USER
-      defaultUserRoles: VEHICLE_OWNER
-      claimMappings: firstName#given_name,lastName#family_name,email#email
-    - clientName: Azure
-      registrationId: azureidp
-      clientId: xxx
-      clientSecret: xxx
-      clientAuthenticationMethod: client_secret_post
-      scope: openid
-      authorizationUri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
-      tokenUri: https://login.microsoftonline.com/common/oauth2/v2.0/token
-      userInfoUri: https://graph.microsoft.com/oidc/userinfo
-      userNameAttributeName: sub
-      jwkSetUri: https://login.microsoftonline.com/common/discovery/v2.0/keys
-      tokenInfoSource: FETCH_INTERNAL_USER
-      createUserMode: CREATE_INTERNAL_USER
-      defaultUserRoles: VEHICLE_OWNER
-      claimMappings: firstName#given_name,lastName#family_name,email#email
-
 service:
   type: ClusterIP
   port: 9443
@@ -416,30 +245,20 @@ service:
 ingress:
   enabled: true
   className: alb
-  groupName: external
-  scheme: internet-facing
+  groupName: ic
+  scheme: internal
   targetType: ip
-  inboundCidrs: ["0.0.0.0/0"]
+  inboundCidrs: []
   tls:
     enabled: true
     sslRedirect: false
   additionalAnnotations: {}
   hosts:
-  - hostPrefix: auth-server
+  - hostPrefix: uidam-authorization-server
     paths:
     - /
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 nodeSelector: {}
 
@@ -450,144 +269,102 @@ affinity: {}
 distributedTracing:
   enabled: false
 
-environmentDomainName: ecsp.example.com # Change this to your domain name
+environmentDomainName: local
 
-uiTemplatePath: "file:///tmp/customui/templates/"
-uiStaticPath: "file:///tmp/customui/static"
+vault:
+  url: https://vault.infra:8200
+  secretsEnginePath: secret
+
+vault_init:
+  enabled: "true"
+  vault_server_ipaddress: "vault.infra"
+  vault_server_port_number: "8200"
+  vault_secret_folder: "uidam-authorization-server"
+  vault_service_component_name: "uidam-authorization-server"
+  secure_http: "true"
+
 javaOpts: -Xms128m -Xmx512m -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxMetaspaceSize=256m
 
-logging:
-  GRAYLOG_ENABLED: "false"
-  GRAYLOG_HOST: graylog3-tcp.graylog.svc.cluster.local
-  GRAYLOG_PORT: "12201"
-  NEVER_BLOCK_FOR_GRAYLOG: "false"
-  LOG_FOLDER: logs/
-  LOG_LEVEL: ERROR
-  IGNITE_LOG_LEVEL: ERROR
-  SVC_LOG_LEVEL: INFO
-  STORAGE_LOG_LEVEL: ERROR
-  SPRING_LOG_LEVEL: ERROR
-  LOG_APPENDER: "STDOUT"
-
 postgres:
-  host: postgresql
-  port: 5432
-  secretName: uidam-authorization-server-credentials
-  userName: TO-BE-UPDATED
-  password: TO-BE-UPDATED
-  port: 5432
-  databaseName: postgresql
-  schemaName: eclipseecsp
-  max_idle_time: "0"
-  data_source_properties:
-    cachePrepStmts: "true"
-    prepStmtCacheSize: "250"
-    prepStmtCacheSqlLimit: "2048"
-  connecion_timeout_ms: "60000"
-  expected99thPercentileMs: "60000"
-  max_pool_size: "30"
-
-postgresql:
-  host: postgresql
+  # Infrastructure settings
+  host: postgresql.ignite-core
   connection: postgresql
   port: 5432
-  secretName: uidam-authorization-server-credentials
-  userName: ChangeMe
-  password: ChangeMe
+  
+  # Database names
+  uidam_dbname: uidam_management
+  
+  # Connection pool settings
+  max_pool_size: "30"
+  max_idle_time: "0"
+  
+  # Database initializer
   initializer:
     image:
-      repository: docker.io/eclipseecsp/postgresql-initializer
-      tag: 1.0.0
+      repository: arti.dev.ignite.harman.com:5061/hctl/postgresql-initializer
+      tag: 1.0.0-updateforschema-3dc4b4f
+      pullPolicy: Always
 
 server_servlet_session_timeout: "5m"
 user_session_force_login: "true"
 
-max_pool_size: "30"
+health:
+  postgresdb:
+    monitor:
+      enabled: "true"
+      restart_on_failure: "true"
+
+# Health probes configuration
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
 
 metrics:
   basePath: "/actuator"
   prometheus:
-    enabled: "false"
+    enabled: "true"
     path: /prometheus
     agent:
       port: "9100"
       port_exposed: "9100"
-  datadog:
-    enabled: "false"
-    uri: "https://api.datadoghq.com"
-    apiKey: "ChangeMe"
-    applicationKey: "ChangeMe"
-    descriptions: "true"
-    readTimeout: "5s"
-    connectTimeout: "5s"
-    batchSize: "1000"
-    step: "1m"
-  tags:
-    envName: "dev"
-    product: "UIDAM"
-    service: "UIDAM-Authorization-Server"
 
-postgresdb:
-  metrics:
-    enabled: "false"
-    executor_shutdown_buffer_ms: "2000"
-    thread:
-      freq_ms: "5000"
-      intial_delay_ms: "2000"
-
-jks_file: TO-BE-UPDATED
+#jks_file: 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
+jks_file: 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
+uidampubkey_pem: |
+  -----BEGIN PUBLIC KEY-----
+  MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmYWJnNOFqyxy1c4OQmHj
+  mfxNAQxAvoDocQuIha0fo2Rqvrvgi2B92p8HWZvz6k3CUMf5loT+qM1ogf2e8gbg
+  vgkht1/d1EERN1cQ7PlMfZDky+koALnNF78jbZxYDtHuwovxMC1XcPlKlhW3aZCE
+  ESFhAyYYCY2pWwUZqrtEeOEdOWjNb7oHtCIirroZZKOZmmlQm6lujQz/n1N9yBSy
+  LwItRgpXXrJkENZJmolYKZkXTB+srglIVNjvTKkfgNBhhogdjflzW0jFwrSTYYBO
+  UH/RADloylz+VKnlEdo2xJI8UbChDGXAlP/loub274lifG2Zce2vZcw9LcEEE4hZ
+  SQIDAQAB
+  -----END PUBLIC KEY-----
 nfsServerUrl:
 sharedStoragePvcName: uidam-shared-storage
 app_key: |
   -----BEGIN PRIVATE KEY-----
-  TO-BE-UPDATED
+  To-BE-UPDATED
   -----END PRIVATE KEY-----
 app_pub: |
   -----BEGIN PUBLIC KEY-----
   TO-BE-UPDATED
   -----END PUBLIC KEY-----
-uidam_pub: |
-  -----BEGIN PUBLIC KEY-----
-  TO-BE-UPDATED
-  -----END PUBLIC KEY-----
-
-# Global secrets - These are shared across all tenants
-secrets:
-  keystorePassword: "ChangeMe"
-  igniteRecaptchaKeySecret: "ChangeMe"
-  clientsecretkey: "ChangeMe"
-  clientsecretsalt: "ChangeMe"
-  clientSecret: "ChangeMe"
-
-# Tenant-specific secrets
-tenantSecrets:
-  ecsp:
-    keystorePassword: "ChangeMe"
-    igniteRecaptchaKeySecret: "ChangeMe"
-    clientsecretkey: "ChangeMe"
-    clientsecretsalt: "ChangeMe"
-    clientSecret: "ChangeMe"
-    googleIDPSecret: "ChangeMe"
-    githubIDPSecret: "ChangeMe"
-    cognitoIDPSecret: "ChangeMe"
-    azureIDPSecret: "ChangeMe"
-  sdp:
-    keystorePassword: "ChangeMe"
-    igniteRecaptchaKeySecret: "ChangeMe"
-    clientsecretkey: "ChangeMe"
-    clientsecretsalt: "ChangeMe"
-    clientSecret: "ChangeMe"
-    googleIDPSecret: "ChangeMe"
-    githubIDPSecret: "ChangeMe"
-    cognitoIDPSecret: "ChangeMe"
-    azureIDPSecret: "ChangeMe"
-  default:
-    keystorePassword: "ChangeMe"
-    igniteRecaptchaKeySecret: "ChangeMe"
-    clientsecretkey: "ChangeMe"
-    clientsecretsalt: "ChangeMe"
-    clientSecret: "ChangeMe"
-    googleIDPSecret: "ChangeMe"
-    githubIDPSecret: "ChangeMe"
-    cognitoIDPSecret: "ChangeMe"
-    azureIDPSecret: "ChangeMe"
+tenant:
+  keyStore:
+    keyStoreFilename: "uidamauthserver.jks"
+    keyAlias: "uidam-auth-server"
+    keyType: "JKS"
+    jwtPubKeyPem: "/app/uidam-pub-key-pem"
+  cert:
+    jwtPublicKey: "app.pub"
+    jwtPrivateKey: "app.key"
+    jwtKeyId: "configured-f57f-46a2-b502-8a24c308be7f"

@@ -1,0 +1,10 @@
+apiVersion: vault.harman.com/v1alpha1
+kind: VaultKubernetesRole
+metadata:
+  name: {{ include "uidam-authorization-server.fullname" . }}
+  labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+spec:
+  boundServiceAccountName: {{ include "uidam-authorization-server.fullname" . }}
+  policies:
+  - {{ include "uidam-authorization-server.fullname" . }}
+  vaultName: {{ .Values.vault_init.vault_secret_folder }}-role

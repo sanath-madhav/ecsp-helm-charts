@@ -1,0 +1,10 @@
+apiVersion: vault.harman.com/v1alpha1
+kind: VaultDatabaseRole
+metadata:
+  name: {{ .Values.vault_init.vault_secret_folder }}
+  labels: {{- include "uidam-user-management.labels" . | nindent 4 }}
+spec:
+  connection: {{ .Values.postgres.connection }}
+  vaultName: {{ .Values.vault_init.vault_secret_folder }}-postgres-role
+  creationStatements: >-
+    {{ printf "CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT \"%s_postgres_role\" TO \"{{name}}\";" (.Values.vault_init.vault_secret_folder | replace "-" "_") }}

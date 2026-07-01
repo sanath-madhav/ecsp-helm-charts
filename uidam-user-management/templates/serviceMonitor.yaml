@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "uidam-user-management.fullname" . }}-monitor
+  labels: {{- include "uidam-user-management.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector: {{- include "uidam-user-management.selectorLabels" . | nindent 4 }}
+  
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "uidam-user-management.fullname" . }}
+  labels: {{- include "uidam-user-management.labels" . | nindent 4 }}
+spec:
+  endpoints:
+  - honorLabels: true
+    port: http
+    path: {{ .Values.metrics.basePath }}{{ .Values.metrics.prometheus.path }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels: {{- include "uidam-user-management.selectorLabels" . | nindent 6 }}

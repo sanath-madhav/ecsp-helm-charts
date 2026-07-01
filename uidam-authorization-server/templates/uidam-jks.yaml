@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: {{ include "uidam-authorization-server.fullname" . }}-jks
   labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+  annotations:
+    vault.security.banzaicloud.io/mutate-configmap: "true"
 data:
   jks-file: |-
     {{ .Values.jks_file }}

@@ -1,0 +1,10 @@
+apiVersion: vault.harman.com/v1alpha1
+kind: VaultPolicy
+metadata:
+  name: {{ include "uidam-web-admin-portal.fullname" . }}
+  labels: {{- include "uidam-web-admin-portal.labels" . | nindent 4 }}
+spec:
+  policyDocument: |
+    path "{{ .Values.vault.secretsEnginePath }}/data/{{ .Values.vault_init.vault_secret_folder }}" {
+      capabilities = ["create", "read", "update", "delete", "list"]
+    }

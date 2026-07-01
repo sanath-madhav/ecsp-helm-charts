@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uidam-user-management.fullname" . }}-postgresql-config
+  labels: {{- include "uidam-user-management.labels" . | nindent 4 }}
+data:
+  uidam-user-management-postgres-config.yml: |
+    roles:
+      - role: "uidam_user_management_postgres_role"
+        databases:
+          - database: uidam_management
+            privileges:
+              - resource:
+                  schema: "uidam"
+                  type:   "schema"
+                actions: ["usage","create"]

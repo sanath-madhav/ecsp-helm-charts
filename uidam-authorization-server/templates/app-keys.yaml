@@ -3,7 +3,9 @@ kind: ConfigMap
 metadata:
   name: {{ include "uidam-authorization-server.fullname" . }}-app
   labels: {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+  annotations:
+    vault.security.banzaicloud.io/mutate-configmap: "true"
 data:
   app-pub: {{ .Values.app_pub | quote }}
   app-key: {{ .Values.app_key | quote }}
-  uidam-pub-key-pem: {{ .Values.uidam_pub | quote }}
+  uidam-pub-key-pem: {{ .Values.uidampubkey_pem | quote }}

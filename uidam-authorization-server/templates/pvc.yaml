@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "uidam-shared-storage"
+  labels:
+    {{- include "uidam-authorization-server.labels" . | nindent 4 }}
+    purpose: shared-storage
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: "1Gi"
+  selector:
+    matchLabels:
+      usage: shared
+  storageClassName: ""
